@@ -16,6 +16,7 @@ use Building\Domain\DomainEvent\NewBuildingWasRegistered;
 use Building\Domain\DomainEvent\UserCheckedIntoBuilding;
 use Building\Domain\DomainEvent\UserCheckedOutOfBuilding;
 use Building\Domain\ProcessManager\WhenCheckInAnomalyDetectedThenNotifySecurity;
+use Building\Domain\Repository\BannedUsersInterface;
 use Building\Domain\Repository\BuildingRepositoryInterface;
 use Building\Infrastructure\Projector\UpdateCheckedInUsersPublicJson;
 use Building\Infrastructure\Repository\BuildingRepository;
@@ -263,6 +264,24 @@ return new ServiceManager([
                     new AggregateTranslator()
                 )
             );
+        },
+
+        BannedUsersInterface::class => function () {
+            return new class implements BannedUsersInterface
+            {
+                public function isBanned(string $username) : bool
+                {
+                    return in_array(
+                        $username,
+                        [
+                            'realDonaldTrump', // we really don't want this guy here
+                            'mr hilter',       // another known public enemy
+                            'Gordon Freeman',  // black mesa told me to add him to the list
+                        ],
+                        true
+                    );
+                }
+            };
         },
 
         NewBuildingWasRegistered::class . '-projectors' => function (ContainerInterface $container) : array {
