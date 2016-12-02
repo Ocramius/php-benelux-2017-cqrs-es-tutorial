@@ -11,9 +11,11 @@ use Bernard\QueueFactory;
 use Bernard\QueueFactory\PersistentFactory;
 use Building\Domain\Aggregate\Building;
 use Building\Domain\Command;
+use Building\Domain\DomainEvent\CheckInAnomalyDetected;
 use Building\Domain\DomainEvent\NewBuildingWasRegistered;
 use Building\Domain\DomainEvent\UserCheckedIntoBuilding;
 use Building\Domain\DomainEvent\UserCheckedOutOfBuilding;
+use Building\Domain\ProcessManager\WhenCheckInAnomalyDetectedThenNotifySecurity;
 use Building\Domain\Repository\BuildingRepositoryInterface;
 use Building\Infrastructure\Projector\UpdateCheckedInUsersPublicJson;
 use Building\Infrastructure\Repository\BuildingRepository;
@@ -217,6 +219,15 @@ return new ServiceManager([
                 $buildings->get($command->buildingId())->checkOutUser($command->username());
             };
         },
+        Command\NotifySecurityOfCheckInAnomaly::class => function () : callable {
+            return function (Command\NotifySecurityOfCheckInAnomaly $command) {
+                error_log(sprintf(
+                    'Check-in anomaly detected for user "%s" in building "%s"',
+                    $command->username(),
+                    (string) $command->buildingId()
+                ));
+            };
+        },
         BuildingRepositoryInterface::class => function (ContainerInterface $container) : BuildingRepositoryInterface {
             return new BuildingRepository(
                 new AggregateRepository(
@@ -242,5 +253,12 @@ return new ServiceManager([
                 new UpdateCheckedInUsersPublicJson($container->get(EventStore::class)),
             ];
         },
+
+        CheckInAnomalyDetected::class . '-listeners' => function (ContainerInterface $container) : array {
+            return [
+                new WhenCheckInAnomalyDetectedThenNotifySecurity([$container->get(CommandBus::class), 'dispatch']),
+            ];
+        },
+
     ],
 ]);
