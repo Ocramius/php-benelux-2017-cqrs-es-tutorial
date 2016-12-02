@@ -179,7 +179,7 @@ return new ServiceManager([
             $messageProducer = $container->get(MessageProducer::class);
             $commandBus = $container->get('immediate-command-bus');
 
-            return new class ($messageProducer) extends CommandBus
+            return new class ($messageProducer, $commandBus) extends CommandBus
             {
                 private $messageProducer;
                 private $immediate;
