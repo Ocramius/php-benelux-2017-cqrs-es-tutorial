@@ -143,7 +143,7 @@ return new ServiceManager([
             return $eventStore;
         },
 
-        CommandBus::class                  => function (ContainerInterface $container) : CommandBus {
+        'immediate-command-bus'                  => function (ContainerInterface $container) : CommandBus {
             $commandBus = new CommandBus();
 
             $commandBus->utilize(new ServiceLocatorPlugin($container));
@@ -173,6 +173,33 @@ return new ServiceManager([
             $commandBus->utilize($transactionManager);
 
             return $commandBus;
+        },
+
+        CommandBus::class => function (ContainerInterface $container) : CommandBus {
+            $messageProducer = $container->get(MessageProducer::class);
+            $commandBus = $container->get('immediate-command-bus');
+
+            return new class ($messageProducer) extends CommandBus
+            {
+                private $messageProducer;
+                private $immediate;
+                public function __construct(MessageProducer $messageProducer, CommandBus $immediate)
+                {
+                    $this->messageProducer = $messageProducer;
+                    $this->immediate = $immediate;
+                }
+
+                public function dispatch($command)
+                {
+                    if ($command instanceof Command\RegisterNewBuilding) {
+                        $this->immediate->dispatch($command);
+
+                        return;
+                    }
+
+                    $this->messageProducer->__invoke($command);
+                }
+            };
         },
 
         // ignore this - this is async stuff
