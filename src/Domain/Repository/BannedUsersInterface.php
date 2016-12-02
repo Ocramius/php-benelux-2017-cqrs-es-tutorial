@@ -6,5 +6,5 @@ namespace Building\Domain\Repository;
 
 interface BannedUsersInterface
 {
-    public function isBanned(string $username);
+    public function isBanned(string $username) : bool;
 }
