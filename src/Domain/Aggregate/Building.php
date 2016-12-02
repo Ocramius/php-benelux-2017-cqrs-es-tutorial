@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Building\Domain\Aggregate;
 
+use Building\Domain\DomainEvent\CheckInAnomalyDetected;
 use Building\Domain\DomainEvent\NewBuildingWasRegistered;
 use Building\Domain\DomainEvent\UserCheckedIntoBuilding;
 use Building\Domain\DomainEvent\UserCheckedOutOfBuilding;
@@ -22,6 +23,11 @@ final class Building extends AggregateRoot
      */
     private $name;
 
+    /**
+     * @var <string, null>array
+     */
+    private $checkedInUsers = [];
+
     public static function new(string $name) : self
     {
         $self = new self();
@@ -38,18 +44,35 @@ final class Building extends AggregateRoot
 
     public function checkInUser(string $username)
     {
+        $anomalyDetected = \array_key_exists($username, $this->checkedInUsers);
+
         $this->recordThat(UserCheckedIntoBuilding::fromBuildingIdAndUsername(
             $this->uuid,
             $username
         ));
+        if ($anomalyDetected) {
+            $this->recordThat(CheckInAnomalyDetected::fromBuildingIdAndUsername(
+                $this->uuid,
+                $username
+            ));
+        }
     }
 
     public function checkOutUser(string $username)
     {
+        $anomalyDetected = ! \array_key_exists($username, $this->checkedInUsers);
+
         $this->recordThat(UserCheckedOutOfBuilding::fromBuildingIdAndUsername(
             $this->uuid,
             $username
         ));
+
+        if ($anomalyDetected) {
+            $this->recordThat(CheckInAnomalyDetected::fromBuildingIdAndUsername(
+                $this->uuid,
+                $username
+            ));
+        }
     }
 
     public function whenNewBuildingWasRegistered(NewBuildingWasRegistered $event)
@@ -60,10 +83,15 @@ final class Building extends AggregateRoot
 
     public function whenUserCheckedIntoBuilding(UserCheckedIntoBuilding $event)
     {
-        // nothing, for now
+        $this->checkedInUsers[$event->username()] = null;
     }
 
     public function whenUserCheckedOutOfBuilding(UserCheckedOutOfBuilding $event)
+    {
+        unset($this->checkedInUsers[$event->username()]);
+    }
+
+    public function whenCheckInAnomalyDetected(CheckInAnomalyDetected $event)
     {
         // nothing, for now
     }
