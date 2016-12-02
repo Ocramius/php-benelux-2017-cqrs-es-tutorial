@@ -7,6 +7,7 @@ namespace Building\Infrastructure\Projector;
 use Building\Domain\DomainEvent\NewBuildingWasRegistered;
 use Building\Domain\DomainEvent\UserCheckedIntoBuilding;
 use Building\Domain\DomainEvent\UserCheckedOutOfBuilding;
+use Prooph\EventSourcing\AggregateChanged;
 use Prooph\EventStore\EventStore;
 use Prooph\EventStore\Stream\StreamName;
 
@@ -22,11 +23,16 @@ final class UpdateCheckedInUsersPublicJson
         $this->eventStore = $eventStore;
     }
 
-    public function __invoke()
+    public function __invoke(AggregateChanged $triggeringEvent)
     {
         $buildings = [];
 
-        foreach ($this->eventStore->load(new StreamName('event_stream'))->streamEvents() as $event) {
+        $stream = $this->eventStore->loadEventsByMetadataFrom(
+            new StreamName('event_stream'),
+            ['aggregate_id' => $triggeringEvent->aggregateId()]
+        );
+
+        foreach ($stream as $event) {
             if ($event instanceof NewBuildingWasRegistered) {
                 $buildings[$event->aggregateId()] = [];
             }
