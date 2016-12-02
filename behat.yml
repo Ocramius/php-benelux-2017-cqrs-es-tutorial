@@ -1,0 +1,7 @@
+default:
+  suites:
+    building:
+      contexts:
+        - 'BuildingAcceptanceTesting\BuildingContext'
+      paths:
+        - 'features/building.feature'
