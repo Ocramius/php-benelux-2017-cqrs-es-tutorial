@@ -8,6 +8,7 @@ use Building\Domain\DomainEvent\CheckInAnomalyDetected;
 use Building\Domain\DomainEvent\NewBuildingWasRegistered;
 use Building\Domain\DomainEvent\UserCheckedIntoBuilding;
 use Building\Domain\DomainEvent\UserCheckedOutOfBuilding;
+use Building\Domain\Repository\BannedUsersInterface;
 use Prooph\EventSourcing\AggregateRoot;
 use Rhumsaa\Uuid\Uuid;
 
@@ -42,8 +43,12 @@ final class Building extends AggregateRoot
         return $self;
     }
 
-    public function checkInUser(string $username)
+    public function checkInUser(string $username, BannedUsersInterface $bannedUsers)
     {
+        if ($bannedUsers->isBanned($username)) {
+            throw new \OutOfBoundsException(sprintf('User "%s" is banned, and cannot check-in', $username));
+        }
+
         $anomalyDetected = \array_key_exists($username, $this->checkedInUsers);
 
         $this->recordThat(UserCheckedIntoBuilding::fromBuildingIdAndUsername(

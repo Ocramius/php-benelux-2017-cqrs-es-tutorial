@@ -234,10 +234,11 @@ return new ServiceManager([
             };
         },
         Command\CheckUserIntoBuilding::class => function (ContainerInterface $container) : callable {
-            $buildings = $container->get(BuildingRepositoryInterface::class);
+            $buildings   = $container->get(BuildingRepositoryInterface::class);
+            $bannedUsers = $container->get(BannedUsersInterface::class);
 
-            return function (Command\CheckUserIntoBuilding $command) use ($buildings) {
-                $buildings->get($command->buildingId())->checkInUser($command->username());
+            return function (Command\CheckUserIntoBuilding $command) use ($buildings, $bannedUsers) {
+                $buildings->get($command->buildingId())->checkInUser($command->username(), $bannedUsers);
             };
         },
         Command\CheckUserOutOfBuilding::class => function (ContainerInterface $container) : callable {
